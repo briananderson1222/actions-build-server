@@ -1,0 +1,42 @@
+name: Test Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  test-runner:
+    runs-on: [self-hosted, linux, x64]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Display system information
+        run: |
+          echo "Running on self-hosted runner"
+          uname -a
+          df -h
+          free -h
+          whoami
+
+      - name: Test Docker
+        run: |
+          docker --version
+          docker ps
+          echo "Docker is working!"
+
+      - name: Run a simple command
+        run: |
+          echo "Hello from self-hosted runner!"
+          date
+          pwd
+          ls -la
+
+      - name: Check runner environment
+        run: |
+          echo "HOME=$HOME"
+          echo "USER=$USER"
+          echo "SHELL=$SHELL"
+          env | grep -i github

@@ -1,0 +1,73 @@
+name: Deploy Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_name:
+        description: 'Name for the runner'
+        required: false
+        default: 'self-hosted-runner'
+        type: string
+      runner_labels:
+        description: 'Labels for the runner (comma-separated)'
+        required: false
+        default: 'self-hosted,linux,x64'
+        type: string
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday at midnight
+
+jobs:
+  deploy:
+    name: Deploy Runner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          RUNNER_NAME: ${{ github.event.inputs.runner_name || 'self-hosted-runner' }}
+          RUNNER_LABELS: ${{ github.event.inputs.runner_labels || 'self-hosted,linux,x64' }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+        run: |
+          ssh ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
+            cd ~/dev/build-server/actions || exit 1
+            
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+            
+            sed -i "s/GITHUB_OWNER=.*/GITHUB_OWNER=${GITHUB_OWNER}/" .env
+            sed -i "s/ACCESS_TOKEN=.*/ACCESS_TOKEN=${ACCESS_TOKEN}/" .env
+            sed -i "s/RUNNER_NAME=.*/RUNNER_NAME=${RUNNER_NAME}/" .env
+            sed -i "s/RUNNER_LABELS=.*/RUNNER_LABELS=${RUNNER_LABELS}/" .env
+            
+            ./setup.sh
+            
+            docker compose pull
+            docker compose up -d
+            
+            echo "Runner deployed successfully!"
+          ENDSSH
+
+      - name: Verify runner status
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+        run: |
+          RUNNERS=$(curl -s -H "Authorization: token ${ACCESS_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/orgs/${GITHUB_OWNER}/actions/runners")
+          
+          echo "Current runners:"
+          echo "$RUNNERS" | jq -r '.runners[] | "\(.name) - \(.status)"'

@@ -1,0 +1,12 @@
+.env
+.env.local
+.env.*.local
+
+_runner/
+_work/
+runner-work/
+runner-config/
+
+*.log
+
+.DS_Store
