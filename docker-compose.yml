@@ -7,6 +7,7 @@ services:
       GITHUB_OWNER: ${GITHUB_OWNER}
       GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}
       REPO_URL: https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}
+      ORG_NAME: ${GITHUB_OWNER}
       RUNNER_NAME: ${RUNNER_NAME}
       RUNNER_LABELS: ${RUNNER_LABELS:-self-hosted,linux,x64}
       ACCESS_TOKEN: ${ACCESS_TOKEN}
@@ -17,6 +18,9 @@ services:
       EPHEMERAL: ${EPHEMERAL:-false}
       DISABLE_UPDATE: ${DISABLE_UPDATE:-false}
       RUNNER_SCOPE: ${RUNNER_SCOPE}
+      # Polling configuration (optional)
+      # ACTIONS_RUNNER_POLLING_INTERVAL: 5  # Seconds between polls (default: 5)
+      # ACTIONS_RUNNER_POLLING_TIMEOUT: 60   # How long to wait for response (default: 60)
     env_file:
       - .env
     volumes:
